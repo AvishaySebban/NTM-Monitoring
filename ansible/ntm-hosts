@@ -1,0 +1,10 @@
+[elad]
+10.35.22.139
+10.35.22.109
+
+[eran]
+10.35.22.40
+
+[ntmServers:children]
+elad
+eran

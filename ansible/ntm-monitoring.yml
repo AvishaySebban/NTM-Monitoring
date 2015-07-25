@@ -1,0 +1,70 @@
+---
+- hosts: ntmServers
+  gather_facts: no
+  vars:
+    monitoring_group: monitoring
+    monitoring_user: ntmmonitoring
+    monitoring_pkg: /tmp/ntm-monitoring.zip
+    monitoring_home: /asaban/bulids/devops/ntm-monitoring
+    monitoring_log_dir: /var/log/ntm-monitoring
+    item: /etc/logrotate.d/ntm-monitoring
+   
+  tasks:
+ 
+  - name: install the latest version of epel-release
+    yum: name=epel-release state=latest 
+
+  - name: install the latest version of python-psutil
+    yum: name=python-psutil state=latest 
+
+  # Example group command from Ansible Playbooks
+  - name: Create monitoring group on remote server
+    group: name={{monitoring_group}} state=present
+
+  # Add the user 'ntmmonitoring' with a bash shell, appending the group 'admins' and 'developers' to the user's groups
+  - name: Create user profile on remote server
+    user: name={{monitoring_user}} state=present shell=/bin/bash group={{monitoring_group}} append=yes 
+    #sudo: yes
+
+  
+  # ENV on bashrc
+  - name: Add to PYTHONPATH bashrc
+    lineinfile: 
+      line="export PYTHONPATH=$PYTHONPATH:{{monitoring_home}}/lib:{{monitoring_home}}/conf"
+      dest=/home/{{monitoring_user}}/.bashrc 
+      insertafter='EOF'
+    
+  # Remove old directory
+  - name: Delete a directory
+    file: path=/opt/ntm-monitoring- state=absent recurse=no
+     
+  
+   # Example from Ansible Playbooks
+  - name: unarchive ntm-monitoring on remote
+    unarchive: src={{monitoring_pkg}} dest=/opt copy=yes
+    tags:
+      - update
+   
+   # change file ownership, group and mode. When specifying mode using octal numbers, first digit should always be 0.
+  - name: Change files owner
+    file: path={{monitoring_home}} owner={{monitoring_user}} group={{monitoring_group}} mode=0755 state=directory recurse=yes
+  
+  # Create LogFolder on the machines
+  - name: Creates directory
+    file: path={{monitoring_log_dir}} owner={{monitoring_user}} group={{monitoring_group}} mode=0755 state=directory recurse=yes
+  
+  # Create CronJob
+  - name: Creates weekly backup cronjob
+    cron: minute="*/5" hour="*" weekday="*"
+          name="ntm_monitoring"
+          cron_file="ntm_monitoring_job"
+          user="{{monitoring_user}}"
+          job="{{monitoring_home}}/bin/execute.py --all"
+  
+  # Copy log rotation configuration
+  – name: Copy ntm-monitoring logrotate file
+    copy: src=ntm-monitoring.logrotate dest=/etc/logrotate.d/ntm-monitoring
+	
+  # Add log rotation permissions
+  – name: Copy ntm-monitoring sudoers conf
+    copy: src=ntm-monitoring.sudoers dest=/etc/sudoers.d/ntm-monitoring

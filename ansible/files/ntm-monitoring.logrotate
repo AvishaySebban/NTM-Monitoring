@@ -1,0 +1,7 @@
+/var/log/ntm-monitoring/*.log {
+    missingok
+    notifempty
+    compress
+    size 10mb
+    daily
+}

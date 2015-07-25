@@ -1,0 +1,1 @@
+ntmmonitoring ALL=NOPASSWD: /usr/sbin/logrotate
